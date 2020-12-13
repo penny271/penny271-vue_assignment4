@@ -21,3 +21,8 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Added by author
+* copy*
+*雛形*
+*備忘録*
