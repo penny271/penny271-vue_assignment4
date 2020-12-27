@@ -30,28 +30,41 @@
 import firebase from 'firebase/app';
 import 'firebase/auth';
 import 'firebase/firestore';
+import store from '../store/index';
+import router from '../router';
+
+import { mapState, mapActions } from 'vuex';
+
 export default {
   name: 'login',
   data() {
-    return {
-      email: '',
-      password: '',
-    };
+    return {};
   },
-  props: ['user'],
-  methods: {
-    login() {
-      firebase
-        .auth()
-        .signInWithEmailAndPassword(this.email, this.password)
-        .then(user => {
-          alert(`You are logged in as ${this.email}`);
-          this.$router.push('/mypage');
-        })
-        .catch(error => {
-          alert(error.message);
-        });
+  computed: {
+    email: {
+      get() {
+        return this.$store.state.userInfo.email;
+      },
+      set(value) {
+        this.$store.commit('userInfo/inputEmail', value);
+      },
     },
+    password: {
+      get() {
+        return this.$store.state.userInfo.password;
+      },
+      set(value) {
+        this.$store.commit('userInfo/inputPassword', value);
+      },
+    },
+  },
+  methods: {
+    ...mapActions('login', [
+      'login', //also supports payload `this.nameOfAction(amount)`
+    ]),
+    // login() {
+    //   this.$store.dispatch('login/login');
+    // },
   },
   beforeRouteEnter(to, from, next) {
     firebase.auth().onAuthStateChanged(user => {

@@ -3,10 +3,7 @@
     <div :class="{ overlay: isActive }"></div>
     <img src="./assets/logo.png" alt="" />
 
-    <router-view
-      :user="user"
-      @activateOverlay="isActive = !isActive"
-    ></router-view>
+    <router-view></router-view>
     <Copyright />
   </div>
 </template>
@@ -16,20 +13,23 @@ import firebase from 'firebase/app';
 import 'firebase/auth';
 import db from './firebaseInit';
 import Copyright from './components/Copyright';
+import { mapState, mapActions } from 'vuex';
 
 export default {
   data() {
-    return {
-      user: '',
-      isActive: false,
-    };
+    return {};
+  },
+  computed: {
+    ...mapState('mypage', ['overlayState']),
+    isActive() {
+      return this.overlayState;
+    },
+  },
+  methods: {
+    ...mapActions('userInfo', ['checkUserState']),
   },
   mounted() {
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        this.user = user;
-      }
-    });
+    this.checkUserState();
   },
   components: {
     Copyright,

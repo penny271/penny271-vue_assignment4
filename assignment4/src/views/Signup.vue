@@ -32,53 +32,42 @@
 
 <script>
 import firebase from 'firebase/app';
-// import 'firebase/auth';
-// import 'firebase/firestore';
-// import firebase from 'firebase';
 import db from '../firebaseInit';
+import { mapActions } from 'vuex';
+
 export default {
-  props: ['user'],
   name: 'signup',
   data() {
-    return {
-      user_name: '',
-      balance: 1000,
-      email: '',
-      password: '',
-    };
+    return {};
+  },
+  computed: {
+    user_name: {
+      get() {
+        return this.$store.state.userInfo.user_name;
+      },
+      set(value) {
+        this.$store.commit('userInfo/inputUserName', value);
+      },
+    },
+    email: {
+      get() {
+        return this.$store.state.userInfo.email;
+      },
+      set(value) {
+        this.$store.commit('userInfo/inputEmail', value);
+      },
+    },
+    password: {
+      get() {
+        return this.$store.state.userInfo.password;
+      },
+      set(value) {
+        this.$store.commit('userInfo/inputPassword', value);
+      },
+    },
   },
   methods: {
-    saveUserInfo() {
-      db.collection('activeUsers')
-        .doc(this.user.uid)
-        .set({
-          id: this.user.uid,
-          user_name: this.user_name,
-          balance: this.balance,
-          email: this.email,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        })
-        .catch(error => alert(`Error: ${error.message}`));
-    },
-    createUserAccount() {
-      firebase
-        .auth()
-        .createUserWithEmailAndPassword(this.email, this.password)
-        .then(userCredentials => {
-          return userCredentials.user
-            .updateProfile({
-              displayName: this.user_name,
-            })
-            .then(() => {
-              alert(`Account created for ${this.email}`);
-              this.saveUserInfo();
-              this.$router.push({ name: 'mypage' });
-            });
-        })
-        .catch(error => {
-          alert(`Error: ${error.message}`);
-        });
-    },
+    ...mapActions('signup',['createUserAccount']),
   },
 };
 </script>

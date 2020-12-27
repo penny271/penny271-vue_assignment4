@@ -18,7 +18,6 @@ const router = new VueRouter({
       path: '*',
       redirect: 'login',
     },
-    /*ここから新規追加*/
     {
       path: '/signup',
       name: 'signup',

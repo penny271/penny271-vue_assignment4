@@ -3,10 +3,10 @@
     <div class="mypage-container">
       <div class="head-container">
         <span>{{ user.displayName }}さんようこそ！！</span>
-        <span
-          >残高 : {{ loginUserBalance
-          }}<button @click="logout" id="logout">ログアウト</button></span
-        >
+        <span>
+          残高 : {{ loginUserBalance }}
+          <button @click="logout" id="logout">ログアウト</button>
+        </span>
       </div>
       <h1>ユーザ一覧</h1>
       <table>
@@ -42,7 +42,8 @@
       <transition name="fade">
         <div v-if="isSendClicked" class="showModal" @submit="remitMoney">
           <p>
-            あなたの残高: <span>{{ loginUserBalance }}</span>
+            あなたの残高:
+            <span>{{ loginUserBalance }}</span>
           </p>
           <p>送る金額</p>
           <input type="text" v-model.number="amountToRemit" />
@@ -59,140 +60,83 @@
 import firebase from 'firebase/app';
 import 'firebase/auth';
 import db from '../firebaseInit';
+import { mapState, mapActions, mapMutations } from 'vuex';
+
 export default {
   name: 'mypage',
-  props: ['user'],
+  computed: {
+    ...mapState('mypage', [
+      'loginUserBalance',
+      'selectedBalance',
+      'loginUserBalanceaf',
+      'users',
+    ]),
+    ...mapState('userInfo', ['user']),
+    amountToRemit: {
+      get() {
+        return this.$store.state.mypage.amountToRemit;
+      },
+      set(value) {
+        this.$store.commit('mypage/remitAmount', value);
+      },
+    },
+  },
   data() {
     return {
-      users: [],
-      loggedInUser: [],
-      loginUserBalance: '',
       isWalletClicked: false,
       isSendClicked: false,
       selectedUser: '',
-      selectedBalance: '',
-      amountToRemit: '',
-      receipientDoc: '',
-      receipientFields: '',
     };
   },
   mounted() {
-    db.collection('activeUsers')
-      .orderBy('user_name')
-      .get()
-      .then(querySnapshot => {
-        querySnapshot.forEach(doc => {
-          const data = {
-            id: doc.id,
-            user_name: doc.data().user_name,
-            balance: doc.data().balance,
-            email: doc.data().email,
-          };
-          this.users.push(data);
-        });
-      });
-
-    //- ログインしているユーザーの残高を取ってくる処理
-    db.collection('activeUsers')
-      .doc(this.user.uid)
-      .onSnapshot(doc => {
-        if (doc.exists) {
-          this.loginUserBalance = doc.data().balance;
-        } else {
-          alert('No such document!');
-        }
-      });
+    //下記のようにしないとコードの変更の際にdispathが走り、
+    //users.pushでv-for部分が重複してブラウザに表示されるので、
+    //それを防ぐためのif文処理
+    if (this.$store.state.mypage.users.length === 0) {
+      this.$store.dispatch('mypage/displayUsers');
+    }
   },
   methods: {
+    ...mapActions('mypage', [
+      'getBalance',
+      'console',
+      'signout',
+      '_openSendWindow',
+      '_remitMoney',
+    ]),
+
+    ...mapMutations('mypage', ['toggleOverlay']),
     logout() {
-      firebase
-        .auth()
-        .signOut()
-        .then(() => {
-          alert('Logout!');
-          this.$router.push({ name: 'login' });
-        });
+      this.signout();
     },
     //-残高を表示させる処理
     checkBalance(eachUser) {
       this.selectedUser = eachUser.user_name;
       this.isWalletClicked = true;
-
-      //-選択された残高を取得
-      db.collection('activeUsers')
-        .where('id', '==', eachUser.id)
-        .get()
-        .then(querySnapshot =>
-          querySnapshot.forEach(
-            doc => (this.selectedBalance = doc.data().balance)
-          )
-        );
-
-      this.$emit('activateOverlay');
+      this.getBalance(eachUser);
+      this.toggleOverlay();
     },
     closeWallet() {
       this.isWalletClicked = !this.isWalletClicked;
-      this.$emit('activateOverlay');
+      this.toggleOverlay();
     },
     //- 送金処理するウィンドウを表示
     openSendWindow(eachUser, eachUserID) {
       this.selectedUser = this.user.displayName;
       this.isSendClicked = true;
-
-      //-選択された残高を取得
-      db.collection('activeUsers')
-        .where('id', '==', eachUser.id)
-        .onSnapshot(querySnapshot =>
-          querySnapshot.forEach(
-            doc => (this.selectedBalance = doc.data().balance)
-          )
-        );
-
-      //-送金を受け取る人のdocumentを取得
-      this.receipientDoc = db.collection('activeUsers').doc(eachUserID);
-
-      //-送金を受け取る人のdocumentのフィールド一覧を取得
-      db.collection('activeUsers')
-        .doc(eachUserID)
-        .onSnapshot(doc => {
-          if (doc.exists) {
-            this.receipientFields = doc.data();
-          } else {
-            alert('No such document!');
-          }
-        });
-      this.$emit('activateOverlay');
+      this._openSendWindow({ eachUser: eachUser, eachUserID: eachUserID });
+      this.toggleOverlay();
     },
 
     closeSendWindow() {
       this.isSendClicked = !this.isSendClicked;
-      this.$emit('activateOverlay');
+      this.toggleOverlay();
     },
 
     //-送金処理
     remitMoney() {
       this.closeSendWindow();
-      if (
-        typeof this.amountToRemit === 'number' &&
-        this.loginUserBalance >= this.amountToRemit &&
-        this.amountToRemit >= 0
-      ) {
-        let sender = db.collection('activeUsers').doc(this.user.uid);
-        sender
-          .update({
-            balance: this.loginUserBalance - this.amountToRemit,
-          })
-          .then(() => {
-            db.collection('activeUsers');
-            this.receipientDoc.update({
-              balance: this.receipientFields.balance + this.amountToRemit,
-            });
-            this.amountToRemit = '';
-          });
-      } else {
-        this.amountToRemit = '';
-        alert('Error. Input correct number');
-      }
+      this._remitMoney();
     },
   },
 };
