@@ -13,6 +13,10 @@ const state = {
   recipientDoc: '',
   recipientFields: '',
   overlayState: false,
+
+  // TODO 戻り値用
+  returnSenderBalance: '',
+  returnRecipientBalance: '',
 };
 const getters = {};
 
@@ -130,15 +134,16 @@ const actions = {
   //- 送金処理
   //! ログインユーザーが自分に送金すると、送金された金額が
   //! そのまま残高に足されてしまう。
-  _remitMoney({ state, rootState, commit }) {
+  // TODO async削除 await db. 削除
+  async _remitMoney({ state, rootState, commit }) {
     const sender = db
       .collection('activeUsers')
       .doc(rootState.userInfo.user.uid);
 
-    //recipient === db.collection('activeUsers').doc(eachUserID);
+    // recipient === db.collection('activeUsers').doc(eachUserID);
     const recipient = state.recipientDoc;
 
-    db.runTransaction(async transaction => {
+    await db.runTransaction(async transaction => {
       if (
         typeof state.amountToRemit === 'number' &&
         state.loginUserBalance >= state.amountToRemit &&
@@ -151,15 +156,62 @@ const actions = {
           balance: state.loginUserBalance - state.amountToRemit,
         });
 
+        //ここからsenderの残高の戻り値を検証（transition内）--------------------
+        await console.log(
+          'sender',
+          await sender.get().then(doc => {
+            return doc.data().balance;
+          })
+        );
+
+        this.returnSenderBalance = await sender.get().then(doc => {
+          return doc.data().balance;
+        });
+
+        await console.log(`Sender - ${this.returnSenderBalance}`);
+
         await transaction.update(recipient, {
           balance: state.recipientFields.balance + state.amountToRemit,
         });
+
+        //ここから受金者の戻り値を検証（transition内）
+        await console.log(
+          'recipient',
+          await recipient.get().then(doc => {
+            return doc.data().balance;
+          })
+        );
+
+        this.returnRecipientBalance = await recipient.get().then(doc => {
+          return doc.data().balance;
+        });
+
+        await console.log(`recipient - ${this.returnRecipientBalance}`);
+
         commit('clearAmountToRemit');
       } else {
         commit('clearAmountToRemit');
         console.error('Error. Input correct number');
       }
     });
+    //ここから送金者の戻り値を検証（transition外）
+    await console.log(
+      'sender',
+      sender.get().then(doc => {
+        return doc.data().balance;
+      })
+    );
+    await console.log(`Sender - ${this.returnSenderBalance}`);
+
+    //ここから受金者の戻り値を検証（transition外）
+    await console.log(
+      'recipient',
+      recipient.get().then(doc => {
+        return doc.data().balance;
+      })
+    );
+
+    await console.log(`recipient - ${this.returnRecipientBalance}`);
   },
 };
 export default {

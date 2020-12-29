@@ -5,6 +5,13 @@
         <span>{{ user.displayName }}さんようこそ！！</span>
         <span>
           残高 : {{ loginUserBalance }}
+          <!--
+          <br>
+          Sender残高 : {{ returnSenderBalance }}
+          <br>
+          Recipient残高 : {{ returnRecipientBalance }}
+          <br>
+           -->
           <button @click="logout" id="logout">ログアウト</button>
         </span>
       </div>
@@ -23,6 +30,7 @@
             ><button @click="openSendWindow(eachUser, eachUser.id)">
               送る
             </button>
+            <button>{{selectedBalance}}</button>
           </td>
         </tr>
       </table>
@@ -68,8 +76,10 @@ export default {
     ...mapState('mypage', [
       'loginUserBalance',
       'selectedBalance',
-      'loginUserBalanceaf',
       'users',
+      // TODO 戻り値用
+      'returnSenderBalance',
+      'returnRecipientBalance',
     ]),
     ...mapState('userInfo', ['user']),
     amountToRemit: {
