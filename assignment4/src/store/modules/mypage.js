@@ -152,66 +152,33 @@ const actions = {
         await transaction.get(sender);
         await transaction.get(recipient);
 
-        await transaction.update(sender, {
+        // TODO 検証_20201230
+        const senderData = await transaction.update(sender, {
           balance: state.loginUserBalance - state.amountToRemit,
         });
 
-        //ここからsenderの残高の戻り値を検証（transition内）--------------------
-        await console.log(
-          'sender',
-          await sender.get().then(doc => {
-            return doc.data().balance;
-          })
-        );
+        console.log('senderBalance',senderData);
 
         this.returnSenderBalance = await sender.get().then(doc => {
           return doc.data().balance;
         });
 
-        await console.log(`Sender - ${this.returnSenderBalance}`);
-
-        await transaction.update(recipient, {
+        // TODO 検証_20201230
+        const recipientData = await transaction.update(recipient, {
           balance: state.recipientFields.balance + state.amountToRemit,
         });
 
-        //ここから受金者の戻り値を検証（transition内）
-        await console.log(
-          'recipient',
-          await recipient.get().then(doc => {
-            return doc.data().balance;
-          })
-        );
+        console.log('recipientBalance', recipientData);
 
         this.returnRecipientBalance = await recipient.get().then(doc => {
           return doc.data().balance;
         });
 
-        await console.log(`recipient - ${this.returnRecipientBalance}`);
-
         commit('clearAmountToRemit');
       } else {
         commit('clearAmountToRemit');
-        console.error('Error. Input correct number');
       }
     });
-    //ここから送金者の戻り値を検証（transition外）
-    await console.log(
-      'sender',
-      sender.get().then(doc => {
-        return doc.data().balance;
-      })
-    );
-    await console.log(`Sender - ${this.returnSenderBalance}`);
-
-    //ここから受金者の戻り値を検証（transition外）
-    await console.log(
-      'recipient',
-      recipient.get().then(doc => {
-        return doc.data().balance;
-      })
-    );
-
-    await console.log(`recipient - ${this.returnRecipientBalance}`);
   },
 };
 export default {
