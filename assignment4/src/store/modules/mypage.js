@@ -136,49 +136,53 @@ const actions = {
   //! そのまま残高に足されてしまう。
   // TODO async削除 await db. 削除
   async _remitMoney({ state, rootState, commit }) {
-    const sender = db
+    const sender = await db
       .collection('activeUsers')
       .doc(rootState.userInfo.user.uid);
 
     // recipient === db.collection('activeUsers').doc(eachUserID);
     const recipient = state.recipientDoc;
 
-    await db.runTransaction(async transaction => {
-      if (
-        typeof state.amountToRemit === 'number' &&
-        state.loginUserBalance >= state.amountToRemit &&
-        state.amountToRemit >= 0
-      ) {
-        await transaction.get(sender);
-        await transaction.get(recipient);
+    if (
+      typeof state.amountToRemit === 'number' &&
+      state.loginUserBalance >= state.amountToRemit &&
+      state.amountToRemit >= 0
+    ) {
+      // TODO 検証_20210101
+      const senderBalance = await sender.update({
+        balance: state.loginUserBalance - state.amountToRemit,
+      });
 
-        // TODO 検証_20201230
-        const senderData = await transaction.update(sender, {
-          balance: state.loginUserBalance - state.amountToRemit,
-        });
+      // console.log(senderBalance);
 
-        console.log('senderBalance',senderData);
+      // console.log(
+      //   await sender.update({
+      //     balance: state.loginUserBalance - state.amountToRemit,
+      //   })
+      // );
 
-        this.returnSenderBalance = await sender.get().then(doc => {
-          return doc.data().balance;
-        });
+      console.log(sender.get().then(sender => sender.data().balance));
 
-        // TODO 検証_20201230
-        const recipientData = await transaction.update(recipient, {
-          balance: state.recipientFields.balance + state.amountToRemit,
-        });
+      this.returnSenderBalance = await sender.get().then(doc => {
+        return doc.data().balance;
+      });
 
-        console.log('recipientBalance', recipientData);
+      // TODO 検証_20201230
+      const recipientData = await recipient.update({
+        balance: state.recipientFields.balance + state.amountToRemit,
+      });
 
-        this.returnRecipientBalance = await recipient.get().then(doc => {
-          return doc.data().balance;
-        });
+      // console.log('recipientBalance', recipientData);
 
-        commit('clearAmountToRemit');
-      } else {
-        commit('clearAmountToRemit');
-      }
-    });
+      this.returnRecipientBalance = await recipient.get().then(doc => {
+        return doc.data().balance;
+      });
+      console.log(recipient.get().then(recipient => recipient.data().balance));
+
+      commit('clearAmountToRemit');
+    } else {
+      commit('clearAmountToRemit');
+    }
   },
 };
 export default {
