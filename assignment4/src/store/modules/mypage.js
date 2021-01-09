@@ -3,6 +3,7 @@ import 'firebase/auth';
 import 'firebase/firestore';
 import db from '../../firebaseInit';
 import router from '../../router';
+import userInfo from './userInfo';
 
 const state = {
   users: [],
@@ -13,10 +14,6 @@ const state = {
   recipientDoc: '',
   recipientFields: '',
   overlayState: false,
-
-  // TODO 戻り値用
-  returnSenderBalance: '',
-  returnRecipientBalance: '',
 };
 const getters = {};
 
@@ -132,57 +129,56 @@ const actions = {
   },
 
   //- 送金処理
-  //! ログインユーザーが自分に送金すると、送金された金額が
-  //! そのまま残高に足されてしまう。
-  // TODO async削除 await db. 削除
   async _remitMoney({ state, rootState, commit }) {
-    const sender = await db
+    const sender = db
       .collection('activeUsers')
       .doc(rootState.userInfo.user.uid);
+    const senderID = await sender.get().then(doc => {
+      return doc.data().id;
+    });
 
-    // recipient === db.collection('activeUsers').doc(eachUserID);
-    const recipient = state.recipientDoc;
+    const recipient = await state.recipientDoc;
+    const recipientID = await recipient.get().then(doc => {
+      return doc.data().id;
+    });
 
-    if (
-      typeof state.amountToRemit === 'number' &&
-      state.loginUserBalance >= state.amountToRemit &&
-      state.amountToRemit >= 0
-    ) {
-      // TODO 検証_20210101
-      const senderBalance = await sender.update({
-        balance: state.loginUserBalance - state.amountToRemit,
-      });
+    db.runTransaction(async transaction => {
+      if (senderID === recipientID) {
+        commit('clearAmountToRemit');
+      } else if (
+        typeof state.amountToRemit === 'number' &&
+        state.loginUserBalance >= state.amountToRemit &&
+        state.amountToRemit >= 0
+      ) {
+        // const recipientDoc = db.collection('activeUsers').doc(eachUserID);
+        await transaction.get(sender);
+        await transaction.get(recipient);
 
-      // console.log(senderBalance);
+        await transaction.update(sender, {
+          balance: state.loginUserBalance - state.amountToRemit,
+        });
 
-      // console.log(
-      //   await sender.update({
-      //     balance: state.loginUserBalance - state.amountToRemit,
-      //   })
-      // );
+        await db
+          .collection('activeUsers')
+          // 修正した箇所 vuexから取得可能にした。
+          .doc(userInfo.state.eachUserID)
+          .onSnapshot(doc => {
+            if (doc.exists) {
+              commit('getRecipientFields', doc.data());
+            } else {
+              console.error('No such document!');
+            }
+          });
 
-      console.log(sender.get().then(sender => sender.data().balance));
-
-      this.returnSenderBalance = await sender.get().then(doc => {
-        return doc.data().balance;
-      });
-
-      // TODO 検証_20201230
-      const recipientData = await recipient.update({
-        balance: state.recipientFields.balance + state.amountToRemit,
-      });
-
-      // console.log('recipientBalance', recipientData);
-
-      this.returnRecipientBalance = await recipient.get().then(doc => {
-        return doc.data().balance;
-      });
-      console.log(recipient.get().then(recipient => recipient.data().balance));
-
-      commit('clearAmountToRemit');
-    } else {
-      commit('clearAmountToRemit');
-    }
+        await transaction.update(recipient, {
+          balance: state.recipientFields.balance + state.amountToRemit,
+        });
+        commit('clearAmountToRemit');
+      } else {
+        commit('clearAmountToRemit');
+        console.error('Error. Input correct number');
+      }
+    });
   },
 };
 export default {

@@ -30,7 +30,7 @@
             ><button @click="openSendWindow(eachUser, eachUser.id)">
               送る
             </button>
-            <button>{{selectedBalance}}</button>
+            <button>{{ selectedBalance }}</button>
           </td>
         </tr>
       </table>
@@ -109,7 +109,6 @@ export default {
   methods: {
     ...mapActions('mypage', [
       'getBalance',
-      'console',
       'signout',
       '_openSendWindow',
       '_remitMoney',
@@ -132,6 +131,7 @@ export default {
     },
     //- 送金処理するウィンドウを表示
     openSendWindow(eachUser, eachUserID) {
+      this.$store.commit('userInfo/createEachUserID', eachUserID);
       this.selectedUser = this.user.displayName;
       this.isSendClicked = true;
       this._openSendWindow({ eachUser: eachUser, eachUserID: eachUserID });

@@ -9,6 +9,7 @@ const state = {
   balance: 1000,
   email: '',
   password: '',
+  eachUserID:'',
 };
 const getters = {};
 
@@ -30,6 +31,9 @@ const mutations = {
   },
   clearInputPassword(state) {
     state.password = '';
+  },
+  createEachUserID(state, eachUserID) {
+    state.eachUserID = eachUserID;
   },
 };
 
